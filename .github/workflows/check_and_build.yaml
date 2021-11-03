@@ -82,6 +82,6 @@ jobs:
           # Not required, but speeds up builds
           githubToken: ${{ github.token }}
           dockerRunArgs: |
-            --volume "~/go/pkg/mod:~/go/pkg/mod"
+            --volume "${HOME}/go/pkg/mod:/root/go/pkg/mod"
           run: |
             make build
