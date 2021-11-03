@@ -86,4 +86,5 @@ jobs:
           dockerRunArgs: |
             --volume "${HOME}/go/pkg/mod:/root/go/pkg/mod"
           run: |
+            sudo chmod -R a+rwx ~/go/pkg/mod
             make build
