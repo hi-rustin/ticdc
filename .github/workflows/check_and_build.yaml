@@ -81,8 +81,6 @@ jobs:
           distro: ubuntu20.04
           # Not required, but speeds up builds
           githubToken: ${{ github.token }}
-          setup: |
-            sudo mkdir ~/go/pkg/mod
           dockerRunArgs: |
             --volume "${HOME}/go/pkg/mod:/root/go/pkg/mod"
           run: |
