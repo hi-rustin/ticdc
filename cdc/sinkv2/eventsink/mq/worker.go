@@ -26,7 +26,6 @@ import (
 	"github.com/pingcap/tiflow/cdc/sinkv2/eventsink/mq/dmlproducer"
 	"github.com/pingcap/tiflow/cdc/sinkv2/metrics"
 	"github.com/pingcap/tiflow/cdc/sinkv2/metrics/mq"
-	"github.com/pingcap/tiflow/cdc/sinkv2/tablesink/state"
 	"github.com/pingcap/tiflow/pkg/chann"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -69,7 +68,7 @@ func newWorker(
 	w := &worker{
 		changeFeedID:                id,
 		msgChan:                     chann.New[mqEvent](),
-		ticker:                      time.NewTicker(mqv1.FlushInterval),
+		ticker:                      time.NewTicker(200 * time.Millisecond),
 		encoder:                     encoder,
 		producer:                    producer,
 		metricMQWorkerFlushDuration: mq.WorkerFlushDuration.WithLabelValues(id.Namespace, id.ID),
@@ -91,9 +90,8 @@ func (w *worker) run(ctx context.Context) (retErr error) {
 	log.Info("MQ sink worker started", zap.String("namespace", w.changeFeedID.Namespace),
 		zap.String("changefeed", w.changeFeedID.ID))
 	// Fixed size of the batch.
-	eventsBuf := make([]mqEvent, mqv1.FlushBatchSize)
+	eventsBuf := make([]mqEvent, 200)
 	for {
-		start := time.Now()
 		endIndex, err := w.batch(ctx, eventsBuf)
 		if err != nil {
 			return errors.Trace(err)
@@ -110,8 +108,7 @@ func (w *worker) run(ctx context.Context) (retErr error) {
 		if err != nil {
 			return errors.Trace(err)
 		}
-		duration := time.Since(start)
-		w.metricMQWorkerFlushDuration.Observe(duration.Seconds())
+
 	}
 }
 
@@ -185,12 +182,6 @@ func (w *worker) asyncSend(
 	for key, events := range partitionedRows {
 		rowsCount := 0
 		for _, event := range events {
-			// Skip this event when the table is stopping.
-			if event.GetTableSinkState() != state.TableSinkSinking {
-				event.Callback()
-				log.Debug("Skip event of stopped table", zap.Any("event", event))
-				continue
-			}
 			err := w.encoder.AppendRowChangedEvent(ctx, key.Topic, event.Event, event.Callback)
 			if err != nil {
 				return err
@@ -199,18 +190,23 @@ func (w *worker) asyncSend(
 			w.statistics.ObserveRows(event.Event)
 		}
 
-		for _, message := range w.encoder.Build() {
-			err := w.statistics.RecordBatchExecution(func() (int, error) {
+		start := time.Now()
+		err := w.statistics.RecordBatchExecution(func() (int, error) {
+			thisBatchSize := 0
+			for _, message := range w.encoder.Build() {
 				err := w.producer.AsyncSendMessage(ctx, key.Topic, key.Partition, message)
 				if err != nil {
 					return 0, err
 				}
-				return message.GetRowsCount(), nil
-			})
-			if err != nil {
-				return err
+				thisBatchSize += message.GetRowsCount()
 			}
+			return thisBatchSize, nil
+		})
+		if err != nil {
+			return err
 		}
+		duration := time.Since(start)
+		w.metricMQWorkerFlushDuration.Observe(duration.Seconds())
 	}
 
 	return nil
