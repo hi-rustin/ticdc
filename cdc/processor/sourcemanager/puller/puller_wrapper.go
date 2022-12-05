@@ -123,6 +123,7 @@ func (n *Wrapper) Start(
 				log.Info("[AAA] puller output event",
 					zap.String("namespace", n.changefeed.Namespace),
 					zap.String("changefeed", n.changefeed.ID),
+					zap.Int64("table", n.tableID),
 					zap.Any("event", pEvent))
 				if err := eventSortEngine.Add(n.tableID, pEvent); err != nil {
 					errChan <- err
