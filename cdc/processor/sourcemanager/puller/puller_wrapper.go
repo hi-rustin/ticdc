@@ -18,7 +18,6 @@ import (
 	"sync"
 
 	"github.com/pingcap/failpoint"
-	"github.com/pingcap/log"
 	"github.com/pingcap/tiflow/cdc/contextutil"
 	"github.com/pingcap/tiflow/cdc/model"
 	"github.com/pingcap/tiflow/cdc/processor/sourcemanager/engine"
@@ -29,7 +28,6 @@ import (
 	"github.com/pingcap/tiflow/pkg/regionspan"
 	"github.com/pingcap/tiflow/pkg/upstream"
 	"github.com/pingcap/tiflow/pkg/util"
-	"go.uber.org/zap"
 )
 
 // Wrapper is a wrapper of puller used by source manager.
@@ -120,11 +118,6 @@ func (n *Wrapper) Start(
 					continue
 				}
 				pEvent := model.NewPolymorphicEvent(rawKV)
-				log.Info("[AAA] puller output event",
-					zap.String("namespace", n.changefeed.Namespace),
-					zap.String("changefeed", n.changefeed.ID),
-					zap.Int64("table", n.tableID),
-					zap.Any("event", pEvent))
 				if err := eventSortEngine.Add(n.tableID, pEvent); err != nil {
 					errChan <- err
 				}

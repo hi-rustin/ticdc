@@ -155,7 +155,7 @@ func New(
 		m.eventCache = newRedoEventCache(changefeedID, changefeedInfo.Config.MemoryQuota/3)
 	}
 
-	m.startWorkers(changefeedInfo.Config.Sink.TxnAtomicity.ShouldSplitTxn(), changefeedInfo.Config.EnableOldValue)
+	m.startWorkers(false, changefeedInfo.Config.EnableOldValue)
 	m.startGenerateTasks()
 	m.backgroundGC()
 
