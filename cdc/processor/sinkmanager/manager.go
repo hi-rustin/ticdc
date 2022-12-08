@@ -685,12 +685,12 @@ func (m *SinkManager) StartTable(tableID model.TableID, startTs model.Ts) error 
 	tableSink.(*tableSinkWrapper).start(startTs, replicateTs)
 	m.sinkProgressHeap.push(&progress{
 		tableID:           tableID,
-		nextLowerBoundPos: engine.Position{StartTs: startTs - 1, CommitTs: startTs},
+		nextLowerBoundPos: engine.Position{StartTs: startTs, CommitTs: startTs + 1},
 	})
 	if m.redoManager != nil {
 		m.redoProgressHeap.push(&progress{
 			tableID:           tableID,
-			nextLowerBoundPos: engine.Position{StartTs: startTs - 1, CommitTs: startTs},
+			nextLowerBoundPos: engine.Position{StartTs: startTs, CommitTs: startTs + 1},
 		})
 	}
 	return nil
@@ -749,6 +749,17 @@ func (m *SinkManager) RemoveTable(tableID model.TableID) {
 		zap.Uint64("checkpointTs", sink.getCheckpointTs().Ts))
 	if m.eventCache != nil {
 		m.eventCache.removeTable(tableID)
+	}
+	// Clean progress.
+	progresses := make([]*progress, 0)
+	for m.sinkProgressHeap.len() > 0 {
+		progress := m.sinkProgressHeap.pop()
+		if progress.tableID != tableID {
+			progresses = append(progresses, progress)
+		}
+	}
+	for i := range progresses {
+		m.sinkProgressHeap.push(progresses[i])
 	}
 }
 
