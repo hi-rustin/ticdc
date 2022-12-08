@@ -373,7 +373,10 @@ func (m *SinkManager) generateSinkTasks() error {
 				continue
 			}
 			tableSink := value.(*tableSinkWrapper)
-
+			if tableSink.version != slowestTableProgress.version {
+				// The progress maybe stale.
+				continue
+			}
 			tableState := tableSink.getState()
 			// It means table sink is stopping or stopped.
 			// We should skip it and do not push it back.
@@ -421,7 +424,11 @@ func (m *SinkManager) generateSinkTasks() error {
 				getUpperBound: getUpperBound,
 				tableSink:     tableSink,
 				callback: func(lastWrittenPos engine.Position) {
-					p := &progress{tableID: tableSink.tableID, nextLowerBoundPos: lastWrittenPos.Next()}
+					p := &progress{
+						tableID:           tableSink.tableID,
+						nextLowerBoundPos: lastWrittenPos.Next(),
+						version:           slowestTableProgress.version,
+					}
 					m.sinkProgressHeap.push(p)
 					select {
 					case m.sinkWorkerAvailable <- struct{}{}:
@@ -686,11 +693,13 @@ func (m *SinkManager) StartTable(tableID model.TableID, startTs model.Ts) error 
 	m.sinkProgressHeap.push(&progress{
 		tableID:           tableID,
 		nextLowerBoundPos: engine.Position{StartTs: startTs - 1, CommitTs: startTs},
+		version:           tableSink.(*tableSinkWrapper).version,
 	})
 	if m.redoManager != nil {
 		m.redoProgressHeap.push(&progress{
 			tableID:           tableID,
 			nextLowerBoundPos: engine.Position{StartTs: startTs - 1, CommitTs: startTs},
+			version:           tableSink.(*tableSinkWrapper).version,
 		})
 	}
 	return nil
