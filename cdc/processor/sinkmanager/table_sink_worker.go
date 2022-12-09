@@ -382,7 +382,6 @@ func (w *sinkWorker) handleTask(ctx context.Context, task *sinkTask) (err error)
 		// 2. We append all the events to the table sink, but because we do not reach the update interval,
 		//    we do not advance the table sink.
 		if len(events) > 0 || currentTotalSize > 0 {
-			lastTxnCommitTs = currentCommitTs
 			if err := appendEventsAndRecordCurrentSize(lastTxnCommitTs); err != nil {
 				return errors.Trace(err)
 			}
