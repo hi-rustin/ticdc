@@ -255,6 +255,11 @@ func (w *sinkWorker) handleTask(ctx context.Context, task *sinkTask) (err error)
 				if err := appendEventsAndRecordCurrentSize(currentCommitTs); err != nil {
 					return errors.Trace(err)
 				}
+				// First time meet a finished transaction. So we always need to advance the with current commit ts.
+				if err := advanceTableSinkAndResetCurrentSize(currentCommitTs); err != nil {
+					return errors.Trace(err)
+				}
+				lastTxnCommitTs = currentCommitTs
 			} else {
 				if err := appendEventsAndRecordCurrentSize(lastTxnCommitTs); err != nil {
 					return errors.Trace(err)
@@ -274,15 +279,8 @@ func (w *sinkWorker) handleTask(ctx context.Context, task *sinkTask) (err error)
 					zap.Uint64("currentTotalSize", currentTotalSize),
 					zap.Bool("splitTxn", w.splitTxn),
 				)
-				if lastTxnCommitTs == 0 {
-					// First time meet a finished transaction. So we always need to advance the with current commit ts.
-					if err := advanceTableSinkAndResetCurrentSize(currentCommitTs); err != nil {
-						return errors.Trace(err)
-					}
-				} else {
-					if err := advanceTableSinkAndResetCurrentSize(lastTxnCommitTs); err != nil {
-						return errors.Trace(err)
-					}
+				if err := advanceTableSinkAndResetCurrentSize(lastTxnCommitTs); err != nil {
+					return errors.Trace(err)
 				}
 				lastTxnCommitTs = currentCommitTs
 			}
