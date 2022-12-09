@@ -397,7 +397,7 @@ func (w *sinkWorker) handleTask(ctx context.Context, task *sinkTask) (err error)
 				zap.Uint64("currentTotalSize", currentTotalSize),
 				zap.Bool("splitTxn", w.splitTxn),
 			)
-			if err := advanceTableSinkAndResetCurrentSizeWithBatchID(lastTxnCommitTs); err != nil {
+			if err := advanceTableSinkAndResetCurrentSize(lastTxnCommitTs); err != nil {
 				return errors.Trace(err)
 			}
 		}
