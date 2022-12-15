@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	defaultPullerEventChanSize  = 128
+	defaultPullerEventChanSize  = 10
 	defaultPullerOutputChanSize = 128
 )
 
