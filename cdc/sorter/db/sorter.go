@@ -34,9 +34,9 @@ import (
 
 const (
 	// Capacity of db sorter input and output channels.
-	sorterInputCap, sorterOutputCap = 1, 64
+	sorterInputCap, sorterOutputCap = 1, 10
 	// Max size of received event batch.
-	batchReceiveEventSize = 32
+	batchReceiveEventSize = 10
 )
 
 var dbSorterIDAlloc uint32 = 0
