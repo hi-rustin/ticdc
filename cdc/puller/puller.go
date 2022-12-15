@@ -38,7 +38,7 @@ import (
 
 const (
 	defaultPullerEventChanSize  = 10
-	defaultPullerOutputChanSize = 10
+	defaultPullerOutputChanSize = 1024
 )
 
 // Stats of a puller.
