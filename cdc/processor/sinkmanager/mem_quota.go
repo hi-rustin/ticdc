@@ -76,10 +76,22 @@ func (m *memQuota) tryAcquire(nBytes uint64) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.usedBytes+nBytes > m.totalBytes {
+		log.Debug("AAA: tryAcquire fail",
+			zap.String("namespace", m.changefeedID.Namespace),
+			zap.String("changefeed", m.changefeedID.ID),
+			zap.Uint64("used", m.usedBytes),
+			zap.Uint64("nBytes", nBytes),
+			zap.Uint64("total", m.totalBytes))
 		return false
 	}
 	m.usedBytes += nBytes
 	m.metricUsed.Set(float64(m.usedBytes))
+	log.Debug("AAA: tryAcquire success",
+		zap.String("namespace", m.changefeedID.Namespace),
+		zap.String("changefeed", m.changefeedID.ID),
+		zap.Uint64("used", m.usedBytes),
+		zap.Uint64("nBytes", nBytes),
+		zap.Uint64("total", m.totalBytes))
 	return true
 }
 
@@ -89,6 +101,12 @@ func (m *memQuota) forceAcquire(nBytes uint64) {
 	defer m.mu.Unlock()
 	m.usedBytes += nBytes
 	m.metricUsed.Set(float64(m.usedBytes))
+	log.Debug("AAA: forceAcquire",
+		zap.String("namespace", m.changefeedID.Namespace),
+		zap.String("changefeed", m.changefeedID.ID),
+		zap.Uint64("used", m.usedBytes),
+		zap.Uint64("nBytes", nBytes),
+		zap.Uint64("total", m.totalBytes))
 }
 
 // blockAcquire is used to block the request when the memory quota is not available.
@@ -165,6 +183,11 @@ func (m *memQuota) record(tableID model.TableID, resolved model.ResolvedTs, nByt
 func (m *memQuota) release(tableID model.TableID, resolved model.ResolvedTs) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	log.Debug("AAA: Release memory quota",
+		zap.String("namespace", m.changefeedID.Namespace),
+		zap.String("changefeed", m.changefeedID.ID),
+		zap.Uint64("table", uint64(tableID)),
+		zap.Any("resolved", resolved))
 	if _, ok := m.tableMemory[tableID]; !ok {
 		// This can happen when
 		// 1. the table has no data and never been recorded.
@@ -181,12 +204,23 @@ func (m *memQuota) release(tableID model.TableID, resolved model.ResolvedTs) {
 	}
 	m.tableMemory[tableID] = records[i:]
 	if toRelease == 0 {
+		log.Debug("AAA: No memory quota to release",
+			zap.String("namespace", m.changefeedID.Namespace),
+			zap.String("changefeed", m.changefeedID.ID),
+			zap.Uint64("table", uint64(tableID)),
+			zap.Any("resolved", resolved))
 		return
 	}
 	if m.usedBytes < toRelease {
 		log.Panic("memQuota.release fail",
 			zap.Uint64("used", m.usedBytes), zap.Uint64("release", toRelease))
 	}
+	log.Debug("AAA: Release memory quota",
+		zap.String("namespace", m.changefeedID.Namespace),
+		zap.String("changefeed", m.changefeedID.ID),
+		zap.Uint64("table", uint64(tableID)),
+		zap.Any("resolved", resolved),
+		zap.Uint64("release", toRelease))
 	m.usedBytes -= toRelease
 	m.metricUsed.Set(float64(m.usedBytes))
 	if m.usedBytes < m.totalBytes {

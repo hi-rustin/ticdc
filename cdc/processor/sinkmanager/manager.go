@@ -389,12 +389,22 @@ func (m *SinkManager) generateSinkTasks() error {
 
 			// The table has no available progress.
 			if lowerBound.Compare(upperBound) >= 0 {
+				log.Debug("Table has no available progress, skip it",
+					zap.String("namespace", m.changefeedID.Namespace),
+					zap.String("changefeed", m.changefeedID.ID),
+					zap.Int64("tableID", tableSink.tableID),
+					zap.Any("lowerBound", lowerBound),
+					zap.Any("upperBound", upperBound))
 				m.sinkProgressHeap.push(slowestTableProgress)
 				continue
 			}
 
 			// No available memory, skip this round directly.
 			if !m.memQuota.tryAcquire(requestMemSize) {
+				log.Debug("No available memory, skip this round",
+					zap.String("namespace", m.changefeedID.Namespace),
+					zap.String("changefeed", m.changefeedID.ID),
+					zap.Int64("tableID", tableSink.tableID))
 				break LOOP
 			}
 
