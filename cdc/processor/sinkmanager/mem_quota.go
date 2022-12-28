@@ -208,7 +208,9 @@ func (m *memQuota) release(tableID model.TableID, resolved model.ResolvedTs) {
 			zap.String("namespace", m.changefeedID.Namespace),
 			zap.String("changefeed", m.changefeedID.ID),
 			zap.Uint64("table", uint64(tableID)),
-			zap.Any("resolved", resolved))
+			zap.Any("resolved", resolved),
+			zap.Int("len", len(records)),
+			zap.Any("records", records))
 		return
 	}
 	if m.usedBytes < toRelease {
