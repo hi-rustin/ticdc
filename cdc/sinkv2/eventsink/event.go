@@ -22,6 +22,8 @@ import (
 type TableEvent interface {
 	// GetCommitTs returns the commit timestamp of the event.
 	GetCommitTs() uint64
+	// GetTableName returns the table name of the event.
+	GetTableName() string
 }
 
 // CallbackFunc is the callback function for callbackable event.

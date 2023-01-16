@@ -273,6 +273,11 @@ type RowChangedEvent struct {
 	ReplicatingTs Ts `json:"-" msg:"-"`
 }
 
+// GetTableName returns the table name of the event.
+func (r *RowChangedEvent) GetTableName() string {
+	return r.Table.Table
+}
+
 // GetCommitTs returns the commit timestamp of this event.
 func (r *RowChangedEvent) GetCommitTs() uint64 {
 	return r.CommitTs
@@ -690,4 +695,9 @@ func (t *SingleTableTxn) Append(row *RowChangedEvent) {
 // ToWaitFlush indicates whether to wait flushing after the txn is processed or not.
 func (t *SingleTableTxn) ToWaitFlush() bool {
 	return t.FinishWg != nil
+}
+
+// GetTableName returns the table name of the event.
+func (t *SingleTableTxn) GetTableName() string {
+	return t.Table.Table
 }
