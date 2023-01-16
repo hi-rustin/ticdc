@@ -103,16 +103,19 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 	// otherwise we cannot GC the flushed values as soon as possible.
 	e.eventBuffer = append(make([]E, 0, len(e.eventBuffer[i:])), e.eventBuffer[i:]...)
 
-	if resolvedEvents[0].GetTableName() == "cc_bank0" {
-		<-e.durationTicker.C
-		time.Sleep(200 * time.Millisecond)
-	}
 	resolvedCallbackableEvents := make([]*eventsink.CallbackableEvent[E], 0, len(resolvedEvents))
 	for _, ev := range resolvedEvents {
 		// We have to record the event ID for the callback.
 		ce := &eventsink.CallbackableEvent[E]{
 			Event: ev,
 			Callback: func() {
+				if ev.GetTableName() == "cc_bank0" {
+					select {
+					case <-e.durationTicker.C:
+						time.Sleep(5 * time.Millisecond)
+					default:
+					}
+				}
 				e.progressTracker.addEvent()
 			},
 			SinkState: &e.state,
