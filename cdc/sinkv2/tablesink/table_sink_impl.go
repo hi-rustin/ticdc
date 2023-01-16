@@ -70,7 +70,7 @@ func New[E eventsink.TableEvent](
 		eventBuffer:               make([]E, 0, 1024),
 		state:                     state.TableSinkSinking,
 		metricsTableSinkTotalRows: totalRowsCounter,
-		durationTicker:            time.NewTicker(2 * time.Second),
+		durationTicker:            time.NewTicker(10 * time.Second),
 	}
 }
 
@@ -111,7 +111,7 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 			Callback: func() {
 				if ev.GetTableName() == "cc_bank0" {
 					<-e.durationTicker.C
-					time.Sleep(5 * time.Millisecond)
+					time.Sleep(1 * time.Millisecond)
 				}
 				e.progressTracker.addEvent()
 			},
