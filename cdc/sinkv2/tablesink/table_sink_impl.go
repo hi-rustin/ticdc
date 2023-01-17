@@ -70,7 +70,7 @@ func New[E eventsink.TableEvent](
 		eventBuffer:               make([]E, 0, 1024),
 		state:                     state.TableSinkSinking,
 		metricsTableSinkTotalRows: totalRowsCounter,
-		durationTicker:            time.NewTicker(10 * time.Second),
+		durationTicker:            time.NewTicker(1 * time.Minute),
 	}
 }
 
