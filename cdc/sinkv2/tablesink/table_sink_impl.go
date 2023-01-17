@@ -48,8 +48,6 @@ type EventTableSink[E eventsink.TableEvent] struct {
 
 	// For dataflow metrics.
 	metricsTableSinkTotalRows prometheus.Counter
-
-	durationTicker *time.Ticker
 }
 
 // New an eventTableSink with given backendSink and event appender.
@@ -70,7 +68,6 @@ func New[E eventsink.TableEvent](
 		eventBuffer:               make([]E, 0, 1024),
 		state:                     state.TableSinkSinking,
 		metricsTableSinkTotalRows: totalRowsCounter,
-		durationTicker:            time.NewTicker(1 * time.Minute),
 	}
 }
 
@@ -103,13 +100,6 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 	// otherwise we cannot GC the flushed values as soon as possible.
 	e.eventBuffer = append(make([]E, 0, len(e.eventBuffer[i:])), e.eventBuffer[i:]...)
 
-	if resolvedEvents[0].GetTableName() == "cc_bank0" {
-		select {
-		case <-e.durationTicker.C:
-			time.Sleep(10 * time.Millisecond)
-		default:
-		}
-	}
 	resolvedCallbackableEvents := make([]*eventsink.CallbackableEvent[E], 0, len(resolvedEvents))
 	for _, ev := range resolvedEvents {
 		// We have to record the event ID for the callback.
@@ -161,7 +151,6 @@ func (e *EventTableSink[E]) Close(ctx context.Context) {
 		zap.Uint64("checkpointTs", stoppingCheckpointTs.Ts))
 	e.progressTracker.close(ctx)
 	e.state.Store(state.TableSinkStopped)
-	e.durationTicker.Stop()
 	stoppedCheckpointTs := e.GetCheckpointTs()
 	log.Info("Table sink stopped",
 		zap.String("namespace", e.changefeedID.Namespace),
