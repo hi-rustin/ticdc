@@ -70,7 +70,7 @@ func New[E eventsink.TableEvent](
 		eventBuffer:               make([]E, 0, 1024),
 		state:                     state.TableSinkSinking,
 		metricsTableSinkTotalRows: totalRowsCounter,
-		durationTicker:            time.NewTicker(1 * time.Second),
+		durationTicker:            time.NewTicker(3 * time.Second),
 	}
 }
 
@@ -112,7 +112,7 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 				if ev.GetTableName() == "cc_bank0" {
 					select {
 					case <-e.durationTicker.C:
-						time.Sleep(100 * time.Millisecond)
+						time.Sleep(1 * time.Second)
 					default:
 					}
 				}
