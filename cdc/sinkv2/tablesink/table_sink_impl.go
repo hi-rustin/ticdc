@@ -106,7 +106,7 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 	if resolvedEvents[0].GetTableName() == "cc_bank0" {
 		select {
 		case <-e.durationTicker.C:
-			time.Sleep(5 * time.Second)
+			time.Sleep(10 * time.Second)
 		default:
 		}
 	}
