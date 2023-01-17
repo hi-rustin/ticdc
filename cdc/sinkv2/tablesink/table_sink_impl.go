@@ -110,9 +110,13 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 			Event: ev,
 			Callback: func() {
 				if ev.GetTableName() == "cc_bank0" {
-					time.Sleep(500 * time.Millisecond)
+					go func() {
+						time.Sleep(500 * time.Millisecond)
+						e.progressTracker.addEvent()()
+					}()
+				} else {
+					e.progressTracker.addEvent()()
 				}
-				e.progressTracker.addEvent()()
 			},
 			SinkState: &e.state,
 		}
