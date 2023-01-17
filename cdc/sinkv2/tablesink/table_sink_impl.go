@@ -106,16 +106,17 @@ func (e *EventTableSink[E]) UpdateResolvedTs(resolvedTs model.ResolvedTs) error 
 	resolvedCallbackableEvents := make([]*eventsink.CallbackableEvent[E], 0, len(resolvedEvents))
 	for _, ev := range resolvedEvents {
 		// We have to record the event ID for the callback.
+		callback := e.progressTracker.addEvent()
 		ce := &eventsink.CallbackableEvent[E]{
 			Event: ev,
 			Callback: func() {
 				if ev.GetTableName() == "cc_bank0" {
 					go func() {
 						time.Sleep(500 * time.Millisecond)
-						e.progressTracker.addEvent()()
+						callback()
 					}()
 				} else {
-					e.progressTracker.addEvent()()
+					callback()
 				}
 			},
 			SinkState: &e.state,
