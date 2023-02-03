@@ -31,6 +31,7 @@ import (
 	"github.com/pingcap/tidb/tablecodec"
 	"github.com/pingcap/tidb/types"
 	"github.com/pingcap/tiflow/cdc/model"
+	"github.com/pingcap/tiflow/pkg/arenahelper"
 	cerror "github.com/pingcap/tiflow/pkg/errors"
 	pfilter "github.com/pingcap/tiflow/pkg/filter"
 	"github.com/prometheus/client_golang/prometheus"
@@ -75,6 +76,8 @@ type mounter struct {
 	filter                       pfilter.Filter
 	metricTotalRows              prometheus.Gauge
 	metricIgnoredDMLEventCounter prometheus.Counter
+
+	arena arenahelper.ArenaWrapper
 }
 
 // NewMounter creates a mounter
@@ -93,7 +96,8 @@ func NewMounter(schemaStorage SchemaStorage,
 			WithLabelValues(changefeedID.Namespace, changefeedID.ID),
 		metricIgnoredDMLEventCounter: ignoredDMLEventCounter.
 			WithLabelValues(changefeedID.Namespace, changefeedID.ID),
-		tz: tz,
+		tz:    tz,
+		arena: arenahelper.NewArenaWrapper(),
 	}
 }
 
@@ -269,9 +273,9 @@ func parseJob(v []byte, startTs, CRTs uint64) (*timodel.Job, error) {
 	return job, nil
 }
 
-func datum2Column(tableInfo *model.TableInfo, datums map[int64]types.Datum, fillWithDefaultValue bool) ([]*model.Column, []types.Datum, error) {
-	cols := make([]*model.Column, len(tableInfo.RowColumnsOffset))
-	rawCols := make([]types.Datum, len(tableInfo.RowColumnsOffset))
+func datum2Column(a arenahelper.ArenaWrapper, tableInfo *model.TableInfo, datums map[int64]types.Datum, fillWithDefaultValue bool) ([]*model.Column, []types.Datum, error) {
+	cols := arenahelper.MakeSlice[*model.Column](a, len(tableInfo.RowColumnsOffset), len(tableInfo.RowColumnsOffset))
+	rawCols := arenahelper.MakeSlice[types.Datum](a, len(tableInfo.RowColumnsOffset), len(tableInfo.RowColumnsOffset))
 	for _, colInfo := range tableInfo.Columns {
 		colSize := 0
 		if !model.IsColCDCVisible(colInfo) {
@@ -332,7 +336,7 @@ func (m *mounter) mountRowKVEntry(tableInfo *model.TableInfo, row *rowKVEntry, d
 	if row.PreRowExist {
 		// FIXME(leoppro): using pre table info to mounter pre column datum
 		// the pre column and current column in one event may using different table info
-		preCols, preRawCols, err = datum2Column(tableInfo, row.PreRow, m.enableOldValue)
+		preCols, preRawCols, err = datum2Column(m.arena, tableInfo, row.PreRow, m.enableOldValue)
 		if err != nil {
 			return nil, rawRow, errors.Trace(err)
 		}
@@ -352,7 +356,7 @@ func (m *mounter) mountRowKVEntry(tableInfo *model.TableInfo, row *rowKVEntry, d
 	var cols []*model.Column
 	var rawCols []types.Datum
 	if row.RowExist {
-		cols, rawCols, err = datum2Column(tableInfo, row.Row, true)
+		cols, rawCols, err = datum2Column(m.arena, tableInfo, row.Row, true)
 		if err != nil {
 			return nil, rawRow, errors.Trace(err)
 		}
