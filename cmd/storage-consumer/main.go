@@ -513,6 +513,10 @@ func (c *consumer) waitTableFlushComplete(ctx context.Context, tableID model.Tab
 			c.tableTsMap[tableID] = resolvedTs.AdvanceBatch()
 			return nil
 		}
+		log.Info("wait table flush complete",
+			zap.Int64("tableID", tableID),
+			zap.Any("resolvedTs", resolvedTs),
+			zap.Any("checkpoint", checkpoint))
 		time.Sleep(defaultFlushWaitDuration)
 	}
 }
