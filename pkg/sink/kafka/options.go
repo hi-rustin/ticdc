@@ -515,8 +515,9 @@ func AdjustOptions(
 		ctx,
 		BrokerMessageMaxBytesConfigName,
 	)
+
 	if err != nil {
-		log.Warn("TiCDC cannot find `message.max.bytes` from broker's configuration")
+		log.Warn("TiCDC cannot find `message.max.bytes` from broker's configuration", zap.Error(err))
 		return errors.Trace(err)
 	}
 	brokerMessageMaxBytes, err := strconv.Atoi(brokerMessageMaxBytesStr)

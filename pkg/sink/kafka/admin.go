@@ -96,6 +96,9 @@ func (a *saramaAdminClient) queryClusterWithRetry(ctx context.Context, query fun
 		if err == nil {
 			return nil
 		}
+		if strings.Contains(err.Error(), "NONE") {
+			return nil
+		}
 
 		log.Warn("query kafka cluster meta failed, retry it",
 			zap.String("namespace", a.changefeed.Namespace),
@@ -159,11 +162,21 @@ func (a *saramaAdminClient) GetCoordinator(ctx context.Context) (int, error) {
 func (a *saramaAdminClient) GetBrokerConfig(
 	ctx context.Context,
 	configName string,
-) (string, error) {
+) (_ string, err error) {
+
+	defer func() {
+		log.Error("get kafka broker config failed",
+			zap.String("namespace", a.changefeed.Namespace),
+			zap.String("changefeed", a.changefeed.ID),
+			zap.String("config name", configName),
+			zap.Error(err))
+	}()
+
 	controller, err := a.GetCoordinator(ctx)
 	if err != nil {
 		return "", err
 	}
+	log.Info("get kafka controller", zap.Int("controller", controller))
 
 	var configEntries []sarama.ConfigEntry
 	query := func() error {
@@ -172,23 +185,24 @@ func (a *saramaAdminClient) GetBrokerConfig(
 			Name:        strconv.Itoa(controller),
 			ConfigNames: []string{configName},
 		})
+		log.Info("describe kafka config", zap.Any("config entries", configEntries), zap.Error(err))
 		return err
 	}
 	err = a.queryClusterWithRetry(ctx, query)
 	if err != nil {
 		return "", err
 	}
+	log.Info("all config entries", zap.Any("config entries", configEntries))
 
-	if len(configEntries) == 0 || configEntries[0].Name != configName {
-		log.Warn("Kafka config item not found",
-			zap.String("namespace", a.changefeed.Namespace),
-			zap.String("changefeed", a.changefeed.ID),
-			zap.String("configName", configName))
-		return "", cerror.ErrKafkaBrokerConfigNotFound.GenWithStack(
-			"cannot find the `%s` from the broker's configuration", configName)
+	for _, configEntry := range configEntries {
+		if configEntry.Name == configName {
+			return configEntry.Value, nil
+		}
 	}
 
-	return configEntries[0].Value, nil
+	return "", cerror.ErrKafkaBrokerConfigNotFound.GenWithStack(
+		"cannot find the `%s` from the broker's configuration", configName)
+
 }
 
 func (a *saramaAdminClient) GetTopicsPartitions(_ context.Context) (map[string]int32, error) {
